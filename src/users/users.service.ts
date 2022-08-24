@@ -21,6 +21,11 @@ export class UsersService {
     return user;
   }
 
+  async findUserByEmail(email: string) {
+    const user = await this.repo.findOne({ where: { email } });
+    return user;
+  }
+
   listUsers() {
     const users = this.repo.find();
     return users;

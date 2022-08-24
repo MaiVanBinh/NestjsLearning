@@ -7,23 +7,63 @@ import {
   Param,
   Post,
   Put,
+  Session,
 } from '@nestjs/common';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { CreateUserDto, UpdateUserDto, UserDto } from './dtos/create-user.dto';
 import { UsersService } from './users.service';
+import { AuthService } from './auth.service';
 
 @Controller('users')
 @Serialize(UserDto)
 export class UsersController {
-  constructor(private userService: UsersService) {}
+  constructor(
+    private userService: UsersService,
+    private authService: AuthService,
+  ) {}
+
+  @Get('/whoiam')
+  async whoiam(@Session() session: any) {
+    const userId = session.userId;
+    if (!userId) {
+      return null;
+    }
+    const user = await this.userService.findUserById(userId);
+    return user;
+  }
+
+  @Post('/signout')
+  signout(@Session() session: any) {
+    session.userId = null;
+  }
+
+  @Get('/colors/:color')
+  setColor(@Param('color') color: string, @Session() session: any) {
+    session.color = color;
+  }
+
+  @Get('/colors')
+  getColor(@Session() session: any) {
+    return session.color;
+  }
 
   @Post('/sign-up')
-  createUser(@Body() createUser: CreateUserDto) {
-    const newUser = this.userService.create(
+  async createUser(@Body() createUser: CreateUserDto, @Session() session: any) {
+    const newUser = await this.authService.signUp(
       createUser.email,
       createUser.password,
-      createUser.userName,
     );
+    session.userId = newUser.id;
+    return newUser;
+  }
+
+  @Post('/sign-in')
+  async signin(@Body() createUser: CreateUserDto, @Session() session: any) {
+    const newUser = await this.authService.signIn(
+      createUser.email,
+      createUser.password,
+    );
+    session.userId = newUser.id;
     return newUser;
   }
 
